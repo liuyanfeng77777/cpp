@@ -1,2 +1,1 @@
-# cpp
-useful c++ sample or project
+c++ basic file, opencv and openGL
