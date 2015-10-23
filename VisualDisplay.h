@@ -1,11 +1,3 @@
-//
-//  VisualDisplay.h
-//  AI_GridWorld
-//
-//  Created by cpsfaculty on 11/13/14.
-//  Copyright (c) 2014 ___Ju Shen___. All rights reserved.
-//
-
 #ifndef AI_GridWorld_VisualDisplay_h
 #define AI_GridWorld_VisualDisplay_h
 
