@@ -1,11 +1,3 @@
-//
-//  RLearning.h
-//  AI_GridWorld
-//
-//  Created by cpsfaculty on 11/23/14.
-//  Copyright (c) 2014 ___Ju Shen___. All rights reserved.
-//
-
 #ifndef AI_GridWorld_RLearning_h
 #define AI_GridWorld_RLearning_h
 
