@@ -1,186 +1,147 @@
+#ifndef AI_GridWorld_VisualDisplay_h
+#define AI_GridWorld_VisualDisplay_h
+
+
+#endif
+
 #include <stdio.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/gpu/gpu.hpp>
+#include "MDP.h"
 #include "RLearning.h"
-#include<math.h>
-#include<iostream>
+
+#define ratio 1.0 //determine the size of the image
+#define margin_left 25 //the pixels start for putting text number on the square
+#define margin_bottom 10
+
+#define NUM_BUTTON 100
+#define RADIUS_AGENT 20.0
 
 
-int getMax(float *q_value)
-{
-	int rv=0;
-	for(int i=1;i<4;i++)
-	{
-		if(q_value[rv]<=q_value[i])
-			rv=i;
-	}
-	return rv;
-}
-
-bool ifallequal(float *q_value)
-{
-	for(int i=0;i<4;i++)
-	{
-		if(q_value[i]!=q_value[i+1])
-			return false;
-	}
-	return true;
-}
-
-float calcurate(int i,float *q_value,int *q_times,float current)
-{
-	float rv=current*pow(0.7,q_times[i]);
-	for(int j=0;j<4;j++)
-	{
-		if(j==i)
-			continue;
-		rv+=q_value[j]*(1-pow(0.7,q_times[j]))/3;
-	//	cout<<"rv="<<rv<<"  ";
-	}
-	//cout<<endl;
-	return rv;
-}
-
-int RLearning::getAction()
-{
-	int action = 0;
-	int x=cur_loc.x;
-	int y=cur_loc.y;
-	float rate[4];
-	for(int i=0;i<4;i++)
-		rate[i]=0;
-	bool bl=ifallequal(states[y][x].q_values);
-	if(bl)
-	{
-		for(int i=0;i<4;i++)
-			rate[i]=22.5;
-	}else
-	{
-		int max=getMax(states[y][x].q_values);
-		rate[max]=60;
-		for(int i=0;i<4;i++)
-		{
-			if(i==max)
-				continue;
-			rate[i]=10;
-		}
-	}
-	float r0=calcurate(0,rate,states[y][x].q_times,rate[0]);
-	float r1=calcurate(1,rate,states[y][x].q_times,rate[1]);
-	float r2=calcurate(2,rate,states[y][x].q_times,rate[2]);
-	float r3=calcurate(3,rate,states[y][x].q_times,rate[3]);
-	//cout<<r0<<" "<<r1<<" "<<r2<<" "<<r3<<" "<<endl;
-	rate[0]=r0;
-	rate[1]=r1;
-	rate[2]=r2;
-	rate[3]=r3;
-	float rm=rand()/double(RAND_MAX)*90;
-	//cout<<"rm="<<rm;
-	if(rm<rate[0])
-		action=0;
-	else if(rate[0]<=rm&rm<rate[0]+rate[1])
-		action=1;
-	else if(rate[0]+rate[1]<=rm&rm<rate[2]+rate[1]+rate[0])
-		action=2;
-	else
-		action=3;
-	//cout<<"action="<<action<<" "<<endl;
-    return action;
-}
+using namespace std;
+using namespace cv;
+using namespace gpu;
 
 
-/*Actually this function is suggested to implemented first. This function is similar to the function you implemented as last assignment for MDP. According to the input action and the current location "cur_loc", determine the next location of the variable. To make it easier, this time we assume if you take action north, you have 100% to land to the north as long as there is another square available in the north. Only if you are already on the North bounary or the square in the north is a wall, which is at the location (1, 1), you will bounce back to current location. After the next location is determined, you need to update the corresponding q value. Finally update the variable "cur_loc" by the new location coordinate. There are three steps involved in this function:*/
-void RLearning::move(int action)
-{
-//    Step 1 - determine the next location from the input action and the current location "cur_loc"
-	int x=cur_loc.x;
-	int y=cur_loc.y;
-	if(action==0)
-		x++;
-	if(action==1)
-		y++;
-	if(action==2)
-		x--;
-	if(action==3)
-		y--;
-	if(x>3|x<0|y>2|y<0|(x==1&y==1))
-	{
-		x=cur_loc.x;
-		y=cur_loc.y;
-	}
-	float q=states[cur_loc.y][cur_loc.x].q_values[action];
-	q=q*(1-ALPHA)+ALPHA*GAMMA*states[y][x].state_value;
-	states[cur_loc.y][cur_loc.x].q_values[action]=q;
-	states[cur_loc.y][cur_loc.x].q_times[action]++;
-	int i=getMax(states[cur_loc.y][cur_loc.x].q_values);
-	states[cur_loc.y][cur_loc.x].state_value=states[cur_loc.y][cur_loc.x].q_values[i];
-	cur_loc.x=x;
-	cur_loc.y=y;
-	
+/* Square Unit on the Grid World, which represents a state*/
+struct Square{
+    
+    Point cen_pos; //the center position of the cell
+    Point agent_pos; //define the position that the agent will stay in the square
+    Point q_pos[4]; //the four positions to put the number for Q value in E S W N order
+    float state_value; //the number will be put in the center, which is V(s)
+    float q_value[4]; //the number will be put in the four corner, which is Q(s, a, s'), in E S W N order
+    Point arrow_pos; //the position that the left/right/top/bottom
+    
+    //draw triangles color for different q values
+    Point polygons[4][3];
+    /*const Point* ppt[4] = {polygons[0], polygons[1], polygons[2], polygons[3]};
+    const int npt[4] = {3, 3, 3, 3};*/
 	
     
-    //Step 2 - update the q values from the variables states[y][x], where (x, y) represents the current location of the circle
-    
-    
-    //Step 3 - update the new position: changing the value of variable "cur_loc"
+};
 
 
+/*Buttons*/
+struct Button{
+    Mat org_img; //store the original image that has no click
+    Mat hov_img; //store the image when the mouse hove on top of it
+    Mat clk_img; //store the image when the mouse is clicking on it.
+    int status; //store the status of the button that 0 - shows original image, 1 - shows hover image, 2 - shows clicked image
+    Point top_let; //the position of top left corner of the image
+    Point bot_rgh; //the position of bottom right corner of the image
     
-}
+};
 
-/********************************************************   End of your assignment for this file    *************************************************************/
-
-
-
-RLearning::RLearning()
-{
-    /*Initialize all the state with 0.0 state_value and 0.0 Q_values*/
-    for(int y = 0; y < 3; y++)
-    {
-        for(int x = 0; x < 4; x++)
-        {
-            states[y][x].location.x = x; //specify the location for this state
-            states[y][x].location.y = y;
-            
-            states[y][x].state_value = 0.0; //define the state value
-            states[y][x].q_values[0] = 0.0; //define the Q value
-            states[y][x].q_values[1] = 0.0;
-            states[y][x].q_values[2] = 0.0;
-            states[y][x].q_values[3] = 0.0;
-            states[y][x].q_times[0] = 0;
-			states[y][x].q_times[1] = 0;
-			states[y][x].q_times[2] = 0;
-			states[y][x].q_times[3] = 0;
-            
-        }
-    }
-    
-    /* Set the special Q value for (0, 3) and (1, 3) */
-    states[0][3].q_values[0] = 1.0; //define the Q values for (0, 3)
-    states[0][3].q_values[1] = 1.0;
-    states[0][3].q_values[2] = 1.0;
-    states[0][3].q_values[3] = 1.0;
-    states[1][3].q_values[0] = -1.0; //define the Q value for (1, 3)
-    states[1][3].q_values[1] = -1.0;
-    states[1][3].q_values[2] = -1.0;
-    states[1][3].q_values[3] = -1.0;
-    
-    
-    /* Reset the values for the two special states: diamonds (0, 3), pitfall (1, 3). Actually there are no Q-values for these two states as these two states represents the final state of the game. Similarly, for the wall (1, 1), it does not have any state value or Q values. So make sure not to update these three states during your program*/
-    states[0][3].state_value = 1.0;
-    states[1][3].state_value = -1.0;
-    
-    
-    cur_loc.x = 0;
-    cur_loc.y = 2;
-    
-    
-    
-    
-    
-}
+struct GoButton : Button{
+    Mat org_img_2; //as the go button is special that there are go and pause pattern on the button
+    Mat hov_img_2;
+    Mat clk_img_2;
+    int type; //2 - go is on; 1- paus is on
+};
 
 
-RLearning::~RLearning()
-{
+/*The main GUI class showing the grid world map*/
+class VisualDisplay{
+public:
+    MDP mdp; //the markov decision process class used to compute the values
+    RLearning rl; //retrieve data from the RLearning class
+    Mat gridworld_img; //the main image will display in the window
+    Mat arrow_imgs[4]; //the arrow images
+    Mat arrow_masks[4]; //the mask image for the arrow
+    Mat org_gridworld[3]; //the original image loaded from file
+    Mat q_mask[3][4][4]; //the triangles for update Q value color
+    
+    int square_length; //the size of each square in pixels
+    Point grid_size; //the x and y of this point represent the grid area size
+    Square square[3][4]; //3x4 squares on the image
+    
+    
+    
+    /*Control Data*/
+    int add_dot_sign; //for gaming mode: there are dot on the road
+    int add_ghost_sign; //for gaming mode: there is one ghost in the world
+    int last_action; //for render the circle purpose
+    int ghost_last_action; //for render the ghost purpose
+    int idx; //the global index about number of iterations
+    int motion_sign; //to distinguish the motion and staying still  0 - no moving action (purely stay).
+    int motion_sign_ghost; //the same as motion_sign but control the ghost
+    
+    
+    int game_running; //1- the game is running 0 - the game is not running
+    int game_over_sign; //when the user exit the game from the red or green square
+
+    /*Workflow control image*/
+    Button button[NUM_BUTTON]; //the buttons
+    Button moving_button[4]; //RL mode: the four directions for roboth moving
+    GoButton go_btn; //go button for running the algorithm in a batch
+    int radius;
+    
+    /* Pacman gaming use*/
+    int dots[3][4]; //indicate whether the corresponding dots have been taken
+    cv::Point circle_loc_old;  //the previous location of the pac man
+    cv::Point circle_loc_cur; //the current location of the pac man
+
+    
+    
+    int rl_learning; //1 - currently is learning; 0 - learing is paused
+    
+    
+public:
+    VisualDisplay();
+    ~VisualDisplay();
+    void loadImages();
+    void run();
+    void painContainer();
+    void paintButtons(); //this is called by paintContainer
+    
+    void refreshData(); //retrieve new data from the MDP
+    
+    
+    /*Button Check*/
+    void buttonHoverCheck(int x, int y);
+    void buttonClickCheck(int x, int y);
+    
+    /*MDP Button Callback Functions*/
+    void onNext();
+    void onReset();
+    void onGo();
+    
+    /*MDP Button Callback Functions*/
+    void goEast();
+    void goSouth();
+    void goWest();
+    void goNorth();
+    
+    
+    /*Drawing moving objects*/
+    void drawCircle();
+    
+    
+    void geterateBothActions();
+    void onLearning();
+};
 
 
-}
