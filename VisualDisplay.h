@@ -1,21 +1,9 @@
-//
-//  RLearning.cpp
-//  AI_GridWorld
-//
-//  Created by cpsfaculty on 11/23/14.
-//  Copyright (c) 2014 ___Ju Shen___. All rights reserved.
-//
-
 #include <stdio.h>
 #include "RLearning.h"
 #include<math.h>
 #include<iostream>
 
 
-/******************************************************   You need to implement the two functions below   ***********************************************/
-
-
-/* This function should return one of the four actions from "GO_EAST", "GO_WEST", "GO_NORTH", and "GO_SOURTH". The action should be generated based on the "COUNT" and "Q-values" for each of the four actions at the current state. Then choose the one with the maximum f() value: f(Q, N) = Q + K/N, where Q represents the current q value for action a; N is the count recorded for taking action a from current state. K is just a constant value. You can create any variables (or data members) as you need in this class (either in the "RLearning.h" file or "RLearning.cpp" file */
 int getMax(float *q_value)
 {
 	int rv=0;
